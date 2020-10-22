@@ -57,8 +57,6 @@ function rndInt(max: number): number {
 }
 
 type Pattern = Slot[];
-type DrumPattern = Drum[];
-type SynthPattern = Note[];
 
 const music = {
     scales: {
@@ -84,17 +82,13 @@ const music = {
 
 type Key = number & {"keyType": true}
 
-let state = {
-    key: rndInt(12) as Key,
-    scale: music.scales.minor,
-    progression: music.progressions[0],
-    patterns: [] as Pattern[],
-    bpm: 112
-};
 
-const gen = {
-    arp: () => {
-        const [progression, key, scale] = [state.progression, state.key, state.scale];
+
+type Progression = number[];
+type Scale = number[];
+
+const Generators = {
+    arp: (progression: Progression, key: Key, scale: Scale) => {
 
         const octave = choose([0,12,24]);
         const offset = choose([0,1,2]);
@@ -112,29 +106,26 @@ const gen = {
             } as Slot;
         })
     },
-    bass: () => fill(PatternSize, i => {
-        const [progression, key, scale] = [state.progression, state.key, state.scale];
+    bass: (progression: Progression, key: Key, scale: Scale) => fill(PatternSize, i => {
         const progIndex = Math.floor(i / 4);
         const chordNumber = progression[progIndex];
         const chord = music.chordTypes.single.map(noteIndex => key + scale[(chordNumber - 1 + noteIndex) % scale.length]);
         return {note: i % 2 === 1 ? 'cont' : chord[0] + (Math.floor(i / 2) % 2) * 12 - 12, fx: {pulseWidth: 0}} as Slot;
     }),
-    bass2: () => fill(PatternSize, i => {
-        const [progression, key, scale] = [state.progression, state.key, state.scale];
+    bass2: (progression: Progression, key: Key, scale: Scale) => fill(PatternSize, i => {
         const progIndex = Math.floor(i / 4);
         const chordNumber = progression[progIndex];
         const chord = music.chordTypes.single.map(noteIndex => key + scale[(chordNumber - 1 + noteIndex) % scale.length]);
         return {note: i % 8 === 0 ? chord[0] - 12: 'cont', vel: 2, fx: {pulseWidth: Math.random()}} as Slot;
         //return {note: i % 2 === 1 ? 'cont' : chord[0] + (Math.floor(i / 2) % 2) * 12 - 12} as Slot;
     }),
-    melody1: () => {
-        const [progression, triad, key, scale] = [state.progression, music.chordTypes.triad, state.key, state.scale];
+    melody1: (progression: Progression, key: Key, scale: Scale) => {
         const slow = Math.random() < 0.5;
         const pwmMod = Math.random() < 0.5;
         let pwmAmount = Math.random() * 0.5;
 
         const pattern: Slot[] = [];
-        let current = (choose(triad) - 1) + scale.length * choose([2, 3, 4]);
+        let current = (choose(music.chordTypes.triad) - 1) + scale.length * choose([2, 3, 4]);
         for (let i = 0; i < PatternSize; i++) {
             if (Math.random() < 0.5) {
                 pwmAmount +=0.05;
@@ -168,7 +159,7 @@ const gen = {
             }
             const progIndex = Math.floor(i / 4);
             const chordNumber = progression[progIndex];
-            const chord = triad.map(noteIndex => (chordNumber - 1 + noteIndex) % scale.length);
+            const chord = music.chordTypes.triad.map(noteIndex => (chordNumber - 1 + noteIndex) % scale.length);
 
             if (Math.random() < 0.5 && !chord.includes(current % scale.length)) {
                 if (Math.random() < 0.5) current--; else current++;
@@ -225,6 +216,10 @@ function createPatternDisplay(display: HTMLElement) {
 
 type Synth<T> = { play: (note: T) => void}
 
+function stereoPanner(ctx: AudioContext, pan: number): PannerNode {
+    return new PannerNode(ctx, {panningModel: "equalpower", positionX: pan, positionY: 0, positionZ: 0.5});
+}
+
 function SquareSynth(ctx: AudioContext, pan: number = 0): Synth<Note> {
     const set = (a: AudioParam, v: number) => {a.cancelScheduledValues(ctx.currentTime); a.setValueAtTime(v, ctx.currentTime); };
     const towards = (a: AudioParam, v: number, t: number) => {a.setTargetAtTime(t, ctx.currentTime, t)};
@@ -235,7 +230,8 @@ function SquareSynth(ctx: AudioContext, pan: number = 0): Synth<Note> {
           alwaysOneWavetable = new WaveShaperNode(ctx, {curve: new Float32Array(2).fill(1,0,2)}),
           wavetableOffsetGain = new GainNode(ctx, {gain: 0.0}),
           pulseOutputGain = new GainNode(ctx, {gain:0.0}),
-          outputPanner = new PannerNode(ctx, {});
+          outputPanner = stereoPanner(ctx, pan);
+    wavetableTrigger.start();
     wavetableTrigger.connect(pulseWavetable);
     wavetableTrigger.connect(alwaysOneWavetable);
     alwaysOneWavetable.connect(wavetableOffsetGain);
@@ -252,7 +248,7 @@ function SquareSynth(ctx: AudioContext, pan: number = 0): Synth<Note> {
 
     function noteOn(note: number, glide: number = 0) {
         const glideTime = glide/10;
-        slide(freq, A0F * 2 ** (note / 12), glideTime)
+        slide(freq, A0F * 2 ** (note / 12), glideTime);
         set(gain, level);
         towards(gain, level * sustain, decay);
     }
@@ -274,48 +270,47 @@ function SquareSynth(ctx: AudioContext, pan: number = 0): Synth<Note> {
 }
 
 function DrumSynth(ctx: AudioContext): Synth<Drum> {
-    const osc = new OscillatorNode(ctx, {type: "square", frequency: 55});
-    osc.start();
-    const gain = new GainNode(ctx, {gain: 0.0});
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    const toneOscillator = new OscillatorNode(ctx, {type: "square", frequency: 55}),
+        toneGain = new GainNode(ctx, {gain: 0.0}),
+        noiseWavetableTrigger = new OscillatorNode(ctx, {type: "sawtooth", frequency: 20}),
+        noiseWavetable = new WaveShaperNode(ctx, {curve: fill(1024,x => Math.random() * 2 -1)}),
+        noiseGain = new GainNode(ctx, {gain: 0.0}),
+        noisePan = stereoPanner(ctx, 0.0);
 
-    const noise = new OscillatorNode(ctx, {type: "sawtooth", frequency: 20});
-    noise.start();
-    const noiseShape = new WaveShaperNode(ctx, {curve: fill(1024,x => Math.random() * 2 -1)});
-    noise.connect(noiseShape);
-    const noiseGain = new GainNode(ctx, {gain: 0.0});
-    noiseShape.connect(noiseGain);
-    const noisePan = new StereoPannerNode(ctx, {pan: 0.0});
+    toneOscillator.start();
+    noiseWavetableTrigger.start();
+
+    toneOscillator.connect(toneGain);
+    toneGain.connect(ctx.destination);
+
+    noiseWavetableTrigger.connect(noiseWavetable);
+    noiseWavetable.connect(noiseGain);
     noiseGain.connect(noisePan);
     noisePan.connect(ctx.destination);
 
-    // const analyser = new AnalyserNode(ctx, {fftSize: 256});
-    // gain.connect(analyser);
-    // noiseGain.connect(analyser);
 
     function play(slot: Drum) {
         const vel = slot.vel ? slot.vel : 1;
         if (slot.drum === 'KCK') {
-            osc.detune.cancelScheduledValues(ctx.currentTime);
-            osc.detune.setValueAtTime(3000, ctx.currentTime);
-            osc.detune.setTargetAtTime(0, ctx.currentTime, 0.07);
-            gain.gain.cancelScheduledValues(ctx.currentTime);
-            gain.gain.setValueAtTime(0.3 * vel, ctx.currentTime);
-            gain.gain.setValueCurveAtTime([0.3 * vel, 0.3 * vel, 0.2 * vel, 0.1 * vel, 0.0], ctx.currentTime, 0.10);
+            toneOscillator.detune.cancelScheduledValues(ctx.currentTime);
+            toneOscillator.detune.setValueAtTime(3000, ctx.currentTime);
+            toneOscillator.detune.setTargetAtTime(0, ctx.currentTime, 0.07);
+            toneGain.gain.cancelScheduledValues(ctx.currentTime);
+            toneGain.gain.setValueAtTime(0.3 * vel, ctx.currentTime);
+            toneGain.gain.setValueCurveAtTime([0.3 * vel, 0.3 * vel, 0.2 * vel, 0.1 * vel, 0.0], ctx.currentTime, 0.10);
         } else if (slot.drum === 'NSS') {
             noiseGain.gain.cancelScheduledValues(ctx.currentTime);
             noiseGain.gain.setValueAtTime(0.1 * vel,ctx.currentTime);
             noiseGain.gain.setValueCurveAtTime([0.1 * vel,0.04 * vel,0.0], ctx.currentTime, 0.08);
-            noisePan.pan.cancelScheduledValues(ctx.currentTime);
-            noisePan.pan.setValueAtTime(Math.random() * 0.4-0.2, ctx.currentTime);
+            noisePan.positionX.cancelScheduledValues(ctx.currentTime);
+            noisePan.positionX.setValueAtTime(Math.random() * 0.4-0.2, ctx.currentTime);
         } else if (slot.drum === 'SNR') {
-            osc.detune.cancelScheduledValues(ctx.currentTime);
-            osc.detune.setValueAtTime(2400, ctx.currentTime);
-            osc.detune.setTargetAtTime(600, ctx.currentTime, 0.04);
-            gain.gain.cancelScheduledValues(ctx.currentTime);
-            gain.gain.setValueAtTime(0.2 * vel, ctx.currentTime);
-            gain.gain.setValueCurveAtTime([0.2 * vel, 0.06 * vel, 0.02 * vel, 0], ctx.currentTime, 0.10);
+            toneOscillator.detune.cancelScheduledValues(ctx.currentTime);
+            toneOscillator.detune.setValueAtTime(2400, ctx.currentTime);
+            toneOscillator.detune.setTargetAtTime(600, ctx.currentTime, 0.04);
+            toneGain.gain.cancelScheduledValues(ctx.currentTime);
+            toneGain.gain.setValueAtTime(0.2 * vel, ctx.currentTime);
+            toneGain.gain.setValueCurveAtTime([0.2 * vel, 0.06 * vel, 0.02 * vel, 0], ctx.currentTime, 0.10);
             noiseGain.gain.cancelScheduledValues(ctx.currentTime);
             noiseGain.gain.setValueAtTime(0.2 * vel,ctx.currentTime);
             noiseGain.gain.setValueCurveAtTime([0.2 * vel,0.15 * vel,0.0], ctx.currentTime, 0.15);
@@ -326,28 +321,36 @@ function DrumSynth(ctx: AudioContext): Synth<Drum> {
     }
 }
 
+interface State {
+    key: Key,
+    scale: Scale,
+    progression: Progression,
+    patterns: Pattern[],
+    bpm: number
+}
 
-function modulate() {
+function modulate(key: Key, scale: Scale): [Key, Scale] {
     choose([
         () => {
             // Move to relative major or minor
-            if (state.scale === music.scales.minor) {
-                state.scale = music.scales.major;
-                state.key = (state.key + 3) % 12 as Key;
-            } else if (state.scale === music.scales.major) {
-                state.scale = music.scales.minor;
-                state.key = (state.key + 9) % 12 as Key;
+            if (scale === music.scales.minor) {
+                scale = music.scales.major;
+                key = (key + 3) % 12 as Key;
+            } else if (scale === music.scales.major) {
+                scale = music.scales.minor;
+                key = (key + 9) % 12 as Key;
             }
         },
         () => {
             // Move around the cycle of fifths
             if (Math.random() < 0.5) {
-                state.key = (state.key + 7) % 12 as Key;
+                key = (key + 7) % 12 as Key;
             } else {
-                state.key = (state.key + 5) % 12 as Key;
+                key = (key + 5) % 12 as Key;
             }
         }
     ])();
+    return [key, scale]
 }
 
 function bpmClock() {
@@ -366,7 +369,16 @@ function bpmClock() {
 }
 
 
+
 function start() {
+    let state: State = {
+        key: rndInt(12) as Key,
+        scale: music.scales.minor,
+        progression: music.progressions[0],
+        patterns: [] as Pattern[],
+        bpm: 112
+    };
+
     const display = createPatternDisplay(document.getElementById("display") as HTMLElement);
     const clock = bpmClock();
 
@@ -383,23 +395,24 @@ function start() {
 
     function frame(f: number) {
         const positionInPattern = f % PatternSize;
+
         if (f % 1024 === 0) {
             state.bpm = Math.floor(Math.random() * 80) + 100;
             clock.set(state.bpm, frame);
         }
         if (f % 512 === 0) {
-            modulate();
+            [state.key, state.scale] = modulate(state.key, state.scale);
         }
         if (f % 256 === 0) {
             state.progression = choose(music.progressions);
         }
         if (f % 128 === 0) {
             state.patterns =[
-                choose([gen.bass, gen.bass2, gen.empty])(),
-                Math.random() < 0.7 ? gen.arp() : gen.empty(),
-                Math.random() < 0.7 ? gen.melody1() : gen.empty(),
-                choose([gen.empty, gen.arp, gen.melody1])(),
-                Math.random() < 0.8 ? gen.drum() : gen.empty(),
+                choose([Generators.bass, Generators.bass2, Generators.empty])(state.progression, state.key, state.scale),
+                Math.random() < 0.7 ? Generators.arp(state.progression, state.key, state.scale) : Generators.empty(),
+                Math.random() < 0.7 ? Generators.melody1(state.progression, state.key, state.scale) : Generators.empty(),
+                choose([Generators.empty, Generators.arp, Generators.melody1])(state.progression, state.key, state.scale),
+                Math.random() < 0.8 ? Generators.drum() : Generators.empty(),
             ];
             display.setPatterns(state.patterns);
         }
