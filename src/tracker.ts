@@ -88,12 +88,9 @@ let state = {
     key: rndInt(12) as Key,
     scale: music.scales.minor,
     progression: music.progressions[0],
-    patterns: [] as Pattern[]
+    patterns: [] as Pattern[],
+    bpm: 112
 };
-
-// let key = Math.floor(Math.random()*12);
-// let scale = minor;
-
 
 const gen = {
     arp: () => {
@@ -194,12 +191,9 @@ const gen = {
 
 
 function createPatternDisplay(display: HTMLElement) {
-// const display = document.getElementById("display") as HTMLDivElement;
 
-    function replacePatterns(newPats: Pattern[]) {
-
+    function setPatterns(newPats: Pattern[]) {
         display.innerHTML = "";
-
         function add(pattern: Pattern, index: number) {
             const pDisplay = document.createElement("code");
             pDisplay.innerHTML =
@@ -208,14 +202,13 @@ function createPatternDisplay(display: HTMLElement) {
 
             display.append(pDisplay);
         }
-
         newPats.forEach((p, i) => add(p, i))
     }
 
-    const customStyle = document.createElement("style");
-    customStyle.setAttribute("type", "text/css");
-    document.body.append(customStyle);
-    const css = customStyle.sheet as CSSStyleSheet;
+    const patternDisplayStyles = document.createElement("style");
+    patternDisplayStyles.setAttribute("type", "text/css");
+    document.body.append(patternDisplayStyles);
+    const css = patternDisplayStyles.sheet as CSSStyleSheet;
 
     function highlightRow(index: number) {
         if (css.rules.length > 0) {
@@ -225,86 +218,62 @@ function createPatternDisplay(display: HTMLElement) {
     }
 
     return {
-        replacePatterns,
+        setPatterns,
         highlightRow
     };
 }
 
+type Synth<T> = { play: (note: T) => void}
 
+function SquareSynth(ctx: AudioContext, pan: number = 0): Synth<Note> {
+    const set = (a: AudioParam, v: number) => {a.cancelScheduledValues(ctx.currentTime); a.setValueAtTime(v, ctx.currentTime); };
+    const towards = (a: AudioParam, v: number, t: number) => {a.setTargetAtTime(t, ctx.currentTime, t)};
+    const slide = (a: AudioParam, v: number, t: number) => {a.cancelScheduledValues(ctx.currentTime); a.setTargetAtTime(v,ctx.currentTime, t)};
 
-function SquareSynth(ctx: AudioContext, pan: number = 0) {
-    const osc = new OscillatorNode(ctx, {type: "sawtooth"});
-    osc.start();
-    const ws = new WaveShaperNode(ctx, {curve:new Float32Array(256).fill(-1,0,128).fill(1,128,256)});
-    const one = new WaveShaperNode(ctx, {curve: new Float32Array(2).fill(1,0,2)});
-    const shapegain =  new GainNode(ctx, {gain: 0.0});
+    const wavetableTrigger = new OscillatorNode(ctx, {type: "sawtooth"}),
+          pulseWavetable = new WaveShaperNode(ctx, {curve:new Float32Array(256).fill(-1,0,128).fill(1,128,256)}),
+          alwaysOneWavetable = new WaveShaperNode(ctx, {curve: new Float32Array(2).fill(1,0,2)}),
+          wavetableOffsetGain = new GainNode(ctx, {gain: 0.0}),
+          pulseOutputGain = new GainNode(ctx, {gain:0.0}),
+          outputPanner = new PannerNode(ctx, {});
+    wavetableTrigger.connect(pulseWavetable);
+    wavetableTrigger.connect(alwaysOneWavetable);
+    alwaysOneWavetable.connect(wavetableOffsetGain);
+    wavetableOffsetGain.connect(pulseWavetable);
+    pulseWavetable.connect(pulseOutputGain);
+    pulseOutputGain.connect(outputPanner);
+    outputPanner.connect(ctx.destination);
 
-    const gain = new GainNode(ctx, {gain:0.0});
+    const freq = wavetableTrigger.frequency,
+        width = wavetableOffsetGain.gain,
+        gain = pulseOutputGain.gain;
 
-    const panner = new StereoPannerNode(ctx, {pan: pan});
+    const decay = 0.04, sustain = 0.7, release = 0.01, level = 0.1;
 
-    osc.connect(one);
-    one.connect(shapegain);
-    const width = shapegain.gain;
-    osc.connect(ws);
-    shapegain.connect(ws);
-
-    ws.connect(gain);
-    gain.connect(panner);
-    // const analyser = new AnalyserNode(ctx, {fftSize: 256});
-    // gain.connect(analyser);
-
-    panner.connect(ctx.destination);
     function noteOn(note: number, glide: number = 0) {
         const glideTime = glide/10;
-        osc.frequency.cancelScheduledValues(ctx.currentTime);
-
-        if (glide === 0) {
-            osc.frequency.setValueAtTime(A0F * 2 ** (note/12), ctx.currentTime);
-        } else {
-            osc.frequency.setTargetAtTime(A0F * 2 ** (note/12), ctx.currentTime, glideTime);
-        }
-
-        //width.setValueAtTime(Math.random()*0.6, ctx.currentTime);
-
-        // osc.detune.cancelScheduledValues(ctx.currentTime);
-        // osc.detune.setValueAtTime(Math.random() * 20 - 10, ctx.currentTime);
-        gain.gain.cancelScheduledValues(ctx.currentTime);
-        gain.gain.setValueAtTime(0.1,ctx.currentTime);
-        gain.gain.setTargetAtTime(0.07, ctx.currentTime, 0.04);
+        slide(freq, A0F * 2 ** (note / 12), glideTime)
+        set(gain, level);
+        towards(gain, level * sustain, decay);
     }
     function noteOff() {
-        gain.gain.cancelScheduledValues(ctx.currentTime);
-        gain.gain.setTargetAtTime(0, ctx.currentTime, 0.01);
+        set(gain, 0);
     }
-    function play(slot: Note) {
-        if (slot.note === "---") {
+    function play(note: Note) {
+        if (note.note === "---") {
             noteOff();
-        }  else if (slot.note === 'cont') {
+        }  else if (note.note === 'cont') {
             // do nothing
         } else {
-            noteOn(slot.note, slot.fx?.glide);
+            noteOn(note.note, note.fx?.glide);
         }
-        if (slot.fx && slot.fx.pulseWidth) {
-            width.cancelScheduledValues(ctx.currentTime);
-            width.setValueAtTime(slot.fx.pulseWidth, ctx.currentTime);
-        } else {
-            width.cancelScheduledValues(ctx.currentTime);
-            width.setValueAtTime(0.0, ctx.currentTime);
-        }
+        set(width, note.fx?.pulseWidth ?? 0.0);
     }
 
-    return {
-        // osc,
-        // gain,
-        // noteOn,
-        // noteOff,
-        play,
-        //analyser
-    }
+    return {play}
 }
 
-function DrumSynth(ctx: AudioContext) {
+function DrumSynth(ctx: AudioContext): Synth<Drum> {
     const osc = new OscillatorNode(ctx, {type: "square", frequency: 55});
     osc.start();
     const gain = new GainNode(ctx, {gain: 0.0});
@@ -381,12 +350,25 @@ function modulate() {
     ])();
 }
 
-function start() {
+function bpmClock() {
+    let intervalHandle = {
+        bpmClock: 0
+    };
     let fN = 0;
-    const display = createPatternDisplay(document.getElementById("display") as HTMLElement);
 
-    let bpm = 112;
-    let intervalHandle = {timer: 0};
+    function set(bpm: number, frameFunction: (f: number) => void) {
+        window.clearInterval(intervalHandle.bpmClock);
+        intervalHandle.bpmClock = window.setInterval(() => frameFunction(fN++), (60000 / bpm) / 4);
+    }
+    return {
+        set
+    }
+}
+
+
+function start() {
+    const display = createPatternDisplay(document.getElementById("display") as HTMLElement);
+    const clock = bpmClock();
 
     // @ts-ignore
     const ctx: AudioContext = new (window.AudioContext || window.webkitAudioContext)() as AudioContext;
@@ -399,13 +381,11 @@ function start() {
         DrumSynth(ctx)
     ];
 
-
     function frame(f: number) {
         const positionInPattern = f % PatternSize;
         if (f % 1024 === 0) {
-            bpm = Math.floor(Math.random() * 80) + 100;
-            window.clearInterval(intervalHandle.timer);
-            intervalHandle.timer = window.setInterval(doFrame, (60000/bpm)/4);
+            state.bpm = Math.floor(Math.random() * 80) + 100;
+            clock.set(state.bpm, frame);
         }
         if (f % 512 === 0) {
             modulate();
@@ -421,7 +401,7 @@ function start() {
                 choose([gen.empty, gen.arp, gen.melody1])(),
                 Math.random() < 0.8 ? gen.drum() : gen.empty(),
             ];
-            display.replacePatterns(state.patterns);
+            display.setPatterns(state.patterns);
         }
         display.highlightRow(positionInPattern);
 
@@ -431,10 +411,7 @@ function start() {
         });
     }
 
-    function doFrame() {
-        frame(fN++);
-    }
-    intervalHandle.timer = window.setInterval(doFrame, (60000 / bpm) / 4);
+    clock.set(state.bpm, frame);
 }
 
 let started = false;
