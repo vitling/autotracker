@@ -1,4 +1,4 @@
-import {fill} from './utils'
+import {fill} from './utils.js'
 
 type Synth<T> = { play: (note: T) => void}
 
