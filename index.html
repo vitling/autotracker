@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script type="module" src="target/tracker.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style type = "text/css">
+        .note {
+            display:block;
+            border-top: 1px dotted #444444;
+            margin-bottom: -2px;
+            height: 1em;
+            overflow: hidden;
+        }
+
+        .note:nth-of-type(4n+1) {
+            border-top: 1px dotted darkred;
+        }
+
+        .note:nth-of-type(16n+1) {
+            border-top: 1px solid darkorange;
+        }
+
+        #display {
+            display:flex; width: 100%; justify-content: space-evenly;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            background-color: #222222;
+        }
+
+        #display code {
+            font-family: "VT323", monospace;
+            font-size: 1em;
+            padding-left:10px;
+            padding-right:10px;
+            /*border-left:1px solid #666666;*/
+            width:20%;
+        }
+
+        body {
+            font-family: "VT323", monospace;
+            background-color: #000000;
+            color: #6699FF;
+        }
+        header {
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 16pt;
+        }
+        h1 {
+            font-family: "VT323", monospace;
+            letter-spacing: 1ch;
+            font-size:4em;
+            margin:0;
+        }
+
+        h3 {
+            margin: 0;
+        }
+
+        .auto {
+            color: darkorange;
+        }
+        .tracker {
+            color: #ef6dea;
+        }
+        #click-to-start {
+            font-size:2em;
+            text-align: center;
+            width: 300px;
+            margin-left: auto;
+            margin-right:auto;
+            margin-top:100px;
+            margin-bottom: 100px;
+        }
+        h3 {
+            text-align: center;
+            font-size: 2em;
+        }
+
+    </style>
+</head>
+<body>
+<header>
+<h1><span class="auto">AUTO</span><span class="tracker">TRACKER</span></h1>
+<p>An endless randomised algorithmic Chiptune composition by Vitling aka Demoscene Time Machine</p>
+</header>
+<div id="display" style="">
+<div id="click-to-start">
+    Click to start
+</div>
+</div>
+</body>
+</html>

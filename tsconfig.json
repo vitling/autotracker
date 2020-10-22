@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es5",
+    "lib": ["dom", "esnext"],
+    "sourceMap": true,
+    "outDir": "./target"
+  },
+  "include": [
+    "src/**/*"
+  ]
+}
