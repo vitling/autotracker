@@ -1,62 +1,9 @@
+import PatternDisplay from './display'
+import {choose, fill, rndInt} from './utils'
+import Audio from "./audio";
 
-type Note = {
-    note: number | "---" | 'cont',
-    fx?: {
-        pulseWidth?: number,
-        glide?: number
-    },
-    vel?: number
-}
-type Drum = {
-    drum: "---" | 'KCK' | 'NSS' | 'SNR'
-    vel?: number
-}
-
-type Slot = Note | Drum
-
-const A0 = -12;
-const A0F = 55;
 
 const PatternSize = 64;
-
-function textRepr(slot: Slot) {
-    function hex(v: number) { return Math.floor(v * 255).toString(16).toUpperCase().padStart(2,'0'); }
-    function noteName(v: number | "---" | "cont") {
-        switch (v) {
-            case "---":
-                return "---";
-            case "cont":
-                return "&nbsp;&nbsp;&nbsp;";
-            default:
-                return ['A-', 'A#', 'B-', 'C-', 'C#', 'D-', 'D#', 'E-', 'F-', 'F#', 'G-', 'G#'][(v - A0) % 12] + Math.floor((v - A0) / 12)
-        }
-    }
-    if ("drum" in slot) {
-        let string = slot.drum;
-        if (slot.vel) string +=" v" + hex(slot.vel);
-        return string;
-    } else {
-        let string = noteName(slot.note);
-        if (slot.fx && slot.fx.pulseWidth) string += " w" +hex(slot.fx.pulseWidth);
-        if (slot.fx && slot.fx.glide) string +=" g" + hex(slot.fx.glide);
-        if (slot.vel) string += " v" + hex(slot.vel);
-        return string;
-    }
-}
-
-function fill<T>(count: number, fn: (x: number) => T): T[] {
-    return new Array(count).fill(undefined).map((x,i) => fn(i));
-}
-
-function choose<T>(array: T[]): T {
-    return array[Math.floor(Math.random() * array.length)]
-}
-
-function rndInt(max: number): number {
-    return Math.floor(Math.random() * max);
-}
-
-type Pattern = Slot[];
 
 const music = {
     scales: {
@@ -79,13 +26,6 @@ const music = {
         single: [0]
     }
 };
-
-type Key = number & {"keyType": true}
-
-
-
-type Progression = number[];
-type Scale = number[];
 
 const Generators = {
     arp: (progression: Progression, key: Key, scale: Scale) => {
@@ -181,145 +121,8 @@ const Generators = {
 };
 
 
-function createPatternDisplay(display: HTMLElement) {
-
-    function setPatterns(newPats: Pattern[]) {
-        display.innerHTML = "";
-        function add(pattern: Pattern, index: number) {
-            const pDisplay = document.createElement("code");
-            pDisplay.innerHTML =
-                "<h3>" + (index === 4 ? "*" : "⎍") + (index + 1) + "</h3>" +
-                pattern.map((x, i) => "<div class='note' data-index='" + i + "'>" + textRepr(x) + "</div>").join("");
-
-            display.append(pDisplay);
-        }
-        newPats.forEach((p, i) => add(p, i))
-    }
-
-    const patternDisplayStyles = document.createElement("style");
-    patternDisplayStyles.setAttribute("type", "text/css");
-    document.body.append(patternDisplayStyles);
-    const css = patternDisplayStyles.sheet as CSSStyleSheet;
-
-    function highlightRow(index: number) {
-        if (css.rules.length > 0) {
-            css.deleteRule(0);
-        }
-        css.insertRule(`.note[data-index='${index}'] { background-color: #339933; color: white; font-weight: bold }`)
-    }
-
-    return {
-        setPatterns,
-        highlightRow
-    };
-}
-
-type Synth<T> = { play: (note: T) => void}
-
-function stereoPanner(ctx: AudioContext, pan: number): PannerNode {
-    return new PannerNode(ctx, {panningModel: "equalpower", positionX: pan, positionY: 0, positionZ: 0.5});
-}
-
-function SquareSynth(ctx: AudioContext, pan: number = 0): Synth<Note> {
-    const set = (a: AudioParam, v: number) => {a.cancelScheduledValues(ctx.currentTime); a.setValueAtTime(v, ctx.currentTime); };
-    const towards = (a: AudioParam, v: number, t: number) => {a.setTargetAtTime(t, ctx.currentTime, t)};
-    const slide = (a: AudioParam, v: number, t: number) => {a.cancelScheduledValues(ctx.currentTime); a.setTargetAtTime(v,ctx.currentTime, t)};
-
-    const wavetableTrigger = new OscillatorNode(ctx, {type: "sawtooth"}),
-          pulseWavetable = new WaveShaperNode(ctx, {curve:new Float32Array(256).fill(-1,0,128).fill(1,128,256)}),
-          alwaysOneWavetable = new WaveShaperNode(ctx, {curve: new Float32Array(2).fill(1,0,2)}),
-          wavetableOffsetGain = new GainNode(ctx, {gain: 0.0}),
-          pulseOutputGain = new GainNode(ctx, {gain:0.0}),
-          outputPanner = stereoPanner(ctx, pan);
-    wavetableTrigger.start();
-    wavetableTrigger.connect(pulseWavetable);
-    wavetableTrigger.connect(alwaysOneWavetable);
-    alwaysOneWavetable.connect(wavetableOffsetGain);
-    wavetableOffsetGain.connect(pulseWavetable);
-    pulseWavetable.connect(pulseOutputGain);
-    pulseOutputGain.connect(outputPanner);
-    outputPanner.connect(ctx.destination);
-
-    const freq = wavetableTrigger.frequency,
-        width = wavetableOffsetGain.gain,
-        gain = pulseOutputGain.gain;
-
-    const decay = 0.04, sustain = 0.7, release = 0.01, level = 0.1;
-
-    function noteOn(note: number, glide: number = 0) {
-        const glideTime = glide/10;
-        slide(freq, A0F * 2 ** (note / 12), glideTime);
-        set(gain, level);
-        towards(gain, level * sustain, decay);
-    }
-    function noteOff() {
-        set(gain, 0);
-    }
-    function play(note: Note) {
-        if (note.note === "---") {
-            noteOff();
-        }  else if (note.note === 'cont') {
-            // do nothing
-        } else {
-            noteOn(note.note, note.fx?.glide);
-        }
-        set(width, note.fx?.pulseWidth ?? 0.0);
-    }
-
-    return {play}
-}
-
-function DrumSynth(ctx: AudioContext): Synth<Drum> {
-    const toneOscillator = new OscillatorNode(ctx, {type: "square", frequency: 55}),
-        toneGain = new GainNode(ctx, {gain: 0.0}),
-        noiseWavetableTrigger = new OscillatorNode(ctx, {type: "sawtooth", frequency: 20}),
-        noiseWavetable = new WaveShaperNode(ctx, {curve: fill(1024,x => Math.random() * 2 -1)}),
-        noiseGain = new GainNode(ctx, {gain: 0.0}),
-        noisePan = stereoPanner(ctx, 0.0);
-
-    toneOscillator.start();
-    noiseWavetableTrigger.start();
-
-    toneOscillator.connect(toneGain);
-    toneGain.connect(ctx.destination);
-
-    noiseWavetableTrigger.connect(noiseWavetable);
-    noiseWavetable.connect(noiseGain);
-    noiseGain.connect(noisePan);
-    noisePan.connect(ctx.destination);
 
 
-    function play(slot: Drum) {
-        const vel = slot.vel ? slot.vel : 1;
-        if (slot.drum === 'KCK') {
-            toneOscillator.detune.cancelScheduledValues(ctx.currentTime);
-            toneOscillator.detune.setValueAtTime(3000, ctx.currentTime);
-            toneOscillator.detune.setTargetAtTime(0, ctx.currentTime, 0.07);
-            toneGain.gain.cancelScheduledValues(ctx.currentTime);
-            toneGain.gain.setValueAtTime(0.3 * vel, ctx.currentTime);
-            toneGain.gain.setValueCurveAtTime([0.3 * vel, 0.3 * vel, 0.2 * vel, 0.1 * vel, 0.0], ctx.currentTime, 0.10);
-        } else if (slot.drum === 'NSS') {
-            noiseGain.gain.cancelScheduledValues(ctx.currentTime);
-            noiseGain.gain.setValueAtTime(0.1 * vel,ctx.currentTime);
-            noiseGain.gain.setValueCurveAtTime([0.1 * vel,0.04 * vel,0.0], ctx.currentTime, 0.08);
-            noisePan.positionX.cancelScheduledValues(ctx.currentTime);
-            noisePan.positionX.setValueAtTime(Math.random() * 0.4-0.2, ctx.currentTime);
-        } else if (slot.drum === 'SNR') {
-            toneOscillator.detune.cancelScheduledValues(ctx.currentTime);
-            toneOscillator.detune.setValueAtTime(2400, ctx.currentTime);
-            toneOscillator.detune.setTargetAtTime(600, ctx.currentTime, 0.04);
-            toneGain.gain.cancelScheduledValues(ctx.currentTime);
-            toneGain.gain.setValueAtTime(0.2 * vel, ctx.currentTime);
-            toneGain.gain.setValueCurveAtTime([0.2 * vel, 0.06 * vel, 0.02 * vel, 0], ctx.currentTime, 0.10);
-            noiseGain.gain.cancelScheduledValues(ctx.currentTime);
-            noiseGain.gain.setValueAtTime(0.2 * vel,ctx.currentTime);
-            noiseGain.gain.setValueCurveAtTime([0.2 * vel,0.15 * vel,0.0], ctx.currentTime, 0.15);
-        }
-    }
-    return {
-        play,
-    }
-}
 
 interface State {
     key: Key,
@@ -379,18 +182,19 @@ function start() {
         bpm: 112
     };
 
-    const display = createPatternDisplay(document.getElementById("display") as HTMLElement);
+    const display = PatternDisplay(document.getElementById("display") as HTMLElement);
     const clock = bpmClock();
 
     // @ts-ignore
     const ctx: AudioContext = new (window.AudioContext || window.webkitAudioContext)() as AudioContext;
+    const au = Audio(ctx);
 
     const synths = [
-        SquareSynth(ctx),
-        SquareSynth(ctx, -0.5),
-        SquareSynth(ctx),
-        SquareSynth(ctx,0.5),
-        DrumSynth(ctx)
+        au.SquareSynth(),
+        au.SquareSynth(-0.5),
+        au.SquareSynth(),
+        au.SquareSynth(0.5),
+        au.DrumSynth()
     ];
 
     function frame(f: number) {
