@@ -10,9 +10,9 @@ const scales = {
         major:[0,2,3,5,7,8,10],
         minor:[0,2,4,5,7,9,11]
     };
+
 const chordTypes = {
-    triad: [0,2,4],
-    single: [0]
+    triad: [0,2,4]
 };
 
 function modulate(key: Key, scale: Scale): [Key, Scale] {

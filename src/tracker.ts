@@ -91,10 +91,10 @@ function start() {
         }
         if (f % 128 === 0) {
             state.patterns =[
-                choose([Generators.bass, Generators.bass2, Generators.emptyNote])(state.progression, state.key, state.scale),
-                Math.random() < 0.7 ? Generators.arp(state.progression, state.key, state.scale) : Generators.emptyNote(),
-                Math.random() < 0.7 ? Generators.melody1(state.progression, state.key, state.scale) : Generators.emptyNote(),
-                choose([Generators.emptyNote, Generators.arp, Generators.melody1])(state.progression, state.key, state.scale),
+                choose([Generators.bass, Generators.bass2, Generators.emptyNote])(state),
+                Math.random() < 0.7 ? Generators.arp(state) : Generators.emptyNote(),
+                Math.random() < 0.7 ? Generators.melody1(state) : Generators.emptyNote(),
+                choose([Generators.emptyNote, Generators.arp, Generators.melody1])(state),
                 Math.random() < 0.8 ? Generators.drum() : Generators.emptyDrum(),
             ];
 

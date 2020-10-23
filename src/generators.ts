@@ -11,19 +11,25 @@ function flip(trueChance: number = 0.5) {
     return Math.random() < trueChance;
 }
 
-function getChord(progression: Progression, key: Key, scale: Scale, rowIndex: number): number[] {
+type MusicContext = {
+    progression: Progression,
+    key: Key,
+    scale: Scale
+}
+
+function getChord({progression, key, scale}: MusicContext, rowIndex: number): number[] {
     const progIndex = Math.floor(rowIndex / 4);
     const chordNumber = progression[progIndex];
     return music.chordTypes.triad.map(noteIndex => key + scale[(chordNumber - 1 + noteIndex) % scale.length]);
 }
 
-function arp(progression: Progression, key: Key, scale: Scale): Pattern<Note> {
+function arp(context: MusicContext): Pattern<Note> {
     const octave = choose([0,12,24]);
     const offset = choose([0,1,2]);
     const pwOffset = rndInt(8) * 2;
     const pwCycle = choose([4,5,6,8,12,16]);
     return fill(PatternSize, i => {
-        const chord = getChord(progression, key, scale, i);
+        const chord = getChord(context, i);
         return {
             note: chord[(i + offset + choose([0, 0, 0, 1, 2])) % chord.length] + octave + choose([0,12]),
             fx: {
@@ -32,23 +38,23 @@ function arp(progression: Progression, key: Key, scale: Scale): Pattern<Note> {
         } as Note;
     })
 }
-function bass(progression: Progression, key: Key, scale: Scale): Pattern<Note> {
+function bass(context: MusicContext): Pattern<Note> {
     return fill(PatternSize, i => {
-        const chord = getChord(progression, key, scale, i);
+        const chord = getChord(context, i);
         return {note: i % 2 === 1 ? 'cont' : chord[0] + (Math.floor(i / 2) % 2) * 12 - 12, fx: {pulseWidth: 0}} as Note;
     })
 }
-function bass2(progression: Progression, key: Key, scale: Scale): Pattern<Note> { return fill(PatternSize, i => {
-    const chord = getChord(progression, key, scale, i);
+function bass2(context: MusicContext): Pattern<Note> { return fill(PatternSize, i => {
+    const chord = getChord(context, i);
     return {note: i % 8 === 0 ? chord[0] - 12: 'cont', vel: 2, fx: {pulseWidth: Math.random()}} as Note;
 })}
-function melody1(progression: Progression, key: Key, scale: Scale): Pattern<Note> {
+function melody1(context: MusicContext): Pattern<Note> {
     const slow = flip();
     const pwmMod = flip();
     let pwmAmount = Math.random() * 0.5;
 
     const pattern: Note[] = [];
-    let current = (choose(music.chordTypes.triad) - 1) + scale.length * choose([2, 3, 4]);
+    let current = (choose(music.chordTypes.triad) - 1) + context.scale.length * choose([2, 3, 4]);
     for (let i = 0; i < PatternSize; i++) {
         pwmAmount += flip() ? 0.05 : -0.05;
         pwmAmount += pwmAmount > 0.7 ? -0.05 : pwmAmount < 0.1 ? 0.05 : 0;
@@ -65,14 +71,14 @@ function melody1(progression: Progression, key: Key, scale: Scale): Pattern<Note
             } else if (current < 25 && flip(0.2)) {
                 current += choose([2, 4, 7]);
             }
-            const chord = getChord(progression, key, scale, i);
+            const chord = getChord(context, i);
 
-            if (flip() && !chord.includes(current % scale.length)) {
+            if (flip() && !chord.includes(current % context.scale.length)) {
                 current += flip() ? -1 : 1;
             }
 
             pattern.push({
-                note: key + scale[current % scale.length] + Math.floor(current / scale.length) * 12,
+                note: context.key + context.scale[current % context.scale.length] + Math.floor(current / context.scale.length) * 12,
                 fx: {
                     glide: flip(0.2) ? choose([0.1, 0.2, 0.5, 0.7]) : 0,
                     pulseWidth: pwmMod ? pwmAmount : 0
