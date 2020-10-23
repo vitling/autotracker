@@ -101,12 +101,28 @@
         .tracker {
             color: #ef6dea;
         }
-        #click-to-start {
-            font-size:2em;
+        #seed-entry {
+            font-size:14pt;
             text-align: center;
-            width: 300px;
             margin: 100px auto;
         }
+
+        #seed-entry input,button {
+            background-color: black;
+            color: darkorange;
+            font-family: "VT323", monospace;
+        }
+
+        #seed-entry input {
+            font-size:16pt;
+            border: 2px solid #6699FF;
+        }
+
+        #seed-entry button {
+            border: 2px solid #6699FF;
+            font-size: 32pt;
+        }
+
         h3 {
             text-align: center;
             font-size: 2em;
@@ -129,8 +145,10 @@
     <p><a href="https://github.com/DavW/autotracker">Source Code</a></p>
 </header>
 <div id="display" style="">
-<div id="click-to-start">
-    Click to start
+<div id="seed-entry">
+    Enter Seed: <input autofocus id="seed-text" type="text" placeholder="word or phrase">
+    or leave blank for random<br><br>
+    <button id="start">Start</button>
 </div>
 </div>
 </body>

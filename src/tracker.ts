@@ -5,7 +5,7 @@
 */
 
 import PatternDisplay from './display.js'
-import {choose, fill, rndInt} from './utils.js'
+import {choose, fill, rndInt, rnd, seedRNG} from './utils.js'
 
 import Audio from "./audio.js";
 import * as music from './theory.js'
@@ -53,6 +53,10 @@ function bpmClock() {
 }
 
 function start() {
+    let seed = (document.getElementById("seed-text") as HTMLInputElement).value;
+    if (!seed || seed.length === 0) seed = "" + Math.random();
+    seedRNG(seed);
+
     let state: State = {
         key: rndInt(12) as Key,
         scale: music.scales.minor,
@@ -60,6 +64,8 @@ function start() {
         patterns: [[],[],[],[],[]] as PatternsType<FourChannelsPlusDrums>,
         bpm: 112
     };
+
+
 
     const display = PatternDisplay(document.getElementById("display") as HTMLElement);
     const clock = bpmClock();
@@ -80,7 +86,7 @@ function start() {
         const positionInPattern = f % PatternSize;
 
         if (f % 1024 === 0) {
-            state.bpm = Math.floor(Math.random() * 80) + 100;
+            state.bpm = Math.floor(rnd() * 80) + 100;
             clock.set(state.bpm, frame);
         }
         if (f % 512 === 0) {
@@ -92,10 +98,10 @@ function start() {
         if (f % 128 === 0) {
             state.patterns =[
                 choose([Generators.bass, Generators.bass2, Generators.emptyNote])(state),
-                Math.random() < 0.7 ? Generators.arp(state) : Generators.emptyNote(),
-                Math.random() < 0.7 ? Generators.melody1(state) : Generators.emptyNote(),
+                rnd() < 0.7 ? Generators.arp(state) : Generators.emptyNote(),
+                rnd() < 0.7 ? Generators.melody1(state) : Generators.emptyNote(),
                 choose([Generators.emptyNote, Generators.arp, Generators.melody1])(state),
-                Math.random() < 0.8 ? Generators.drum() : Generators.emptyDrum(),
+                rnd() < 0.8 ? Generators.drum() : Generators.emptyDrum(),
             ];
 
             display.setPatterns(state.patterns);
@@ -115,9 +121,22 @@ function start() {
 }
 
 let started = false;
-document.addEventListener("click", function() {
-    if (!started) {
-        start();
-    }
+document.getElementById("start")?.addEventListener("click", e => {
+    if (!started) { start(); }
     started = true;
 });
+
+document.getElementById("seed-entry")?.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+        if (!started) { start(); }
+        started = true;
+    }
+});
+
+//
+// document.addEventListener("click", function() {
+//     if (!started) {
+//         start();
+//     }
+//     started = true;
+// });

@@ -3,12 +3,12 @@
   This work is licensed under a Creative Commons Attribution 4.0 International License
   https://creativecommons.org/licenses/by/4.0/
 */
-import {choose, fill, rndInt} from './utils.js';
+import {choose, fill, rndInt, rnd} from './utils.js';
 import * as music from './theory.js';
 const PatternSize = 64;
 
 function flip(trueChance: number = 0.5) {
-    return Math.random() < trueChance;
+    return rnd() < trueChance;
 }
 
 type MusicContext = {
@@ -46,12 +46,12 @@ function bass(context: MusicContext): Pattern<Note> {
 }
 function bass2(context: MusicContext): Pattern<Note> { return fill(PatternSize, i => {
     const chord = getChord(context, i);
-    return {note: i % 8 === 0 ? chord[0] - 12: 'cont', vel: 2, fx: {pulseWidth: Math.random()}} as Note;
+    return {note: i % 8 === 0 ? chord[0] - 12: 'cont', vel: 2, fx: {pulseWidth: rnd()}} as Note;
 })}
 function melody1(context: MusicContext): Pattern<Note> {
     const slow = flip();
     const pwmMod = flip();
-    let pwmAmount = Math.random() * 0.5;
+    let pwmAmount = rnd() * 0.5;
 
     const pattern: Note[] = [];
     let current = (choose(music.chordTypes.triad) - 1) + context.scale.length * choose([2, 3, 4]);

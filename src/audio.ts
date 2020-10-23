@@ -3,7 +3,7 @@
   This work is licensed under a Creative Commons Attribution 4.0 International License
   https://creativecommons.org/licenses/by/4.0/
 */
-import {fill} from './utils.js'
+import {fill, rnd} from './utils.js'
 
 type Synth<T> = { play: (note: T) => void}
 
@@ -96,7 +96,7 @@ function Audio(ctx: AudioContext) {
         const toneOscillator = oscillatorNode("square", 55),
             toneGain = gainNode(),
             noiseWavetableTrigger = oscillatorNode("sawtooth", 20),
-            noiseWavetable = waveShaperNode(fill(1024,x => Math.random() * 2 -1)),
+            noiseWavetable = waveShaperNode(fill(1024,x => rnd() * 2 -1)),
             noiseGain = gainNode(),
             noisePan = stereoPannerNode(0);
 
@@ -129,7 +129,7 @@ function Audio(ctx: AudioContext) {
                 // Ugly workaround for safari being a bitch
                 if ("pan" in noisePan) {
                     noisePan.pan.cancelScheduledValues(ctx.currentTime);
-                    noisePan.pan.setValueAtTime(Math.random() * 0.4 - 0.2, ctx.currentTime);
+                    noisePan.pan.setValueAtTime(rnd() * 0.4 - 0.2, ctx.currentTime);
                 }
             } else if (slot.drum === 'SNR') {
                 toneOscillator.detune.cancelScheduledValues(ctx.currentTime);
