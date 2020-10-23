@@ -1,3 +1,9 @@
+/*
+  Copyright 2020 David Whiting
+  This work is licensed under a Creative Commons Attribution 4.0 International License
+  https://creativecommons.org/licenses/by/4.0/
+*/
+
 import PatternDisplay from './display.js'
 import {choose, fill, rndInt} from './utils.js'
 
@@ -91,6 +97,7 @@ function start() {
                 choose([Generators.emptyNote, Generators.arp, Generators.melody1])(state.progression, state.key, state.scale),
                 Math.random() < 0.8 ? Generators.drum() : Generators.emptyDrum(),
             ];
+
             display.setPatterns(state.patterns);
         }
         display.highlightRow(positionInPattern);

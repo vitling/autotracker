@@ -1,3 +1,9 @@
+/*
+  Copyright 2020 David Whiting
+  This work is licensed under a Creative Commons Attribution 4.0 International License
+  https://creativecommons.org/licenses/by/4.0/
+*/
+
 import {choose} from "./utils.js";
 
 const scales = {

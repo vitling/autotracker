@@ -1,3 +1,8 @@
+/*
+  Copyright 2020 David Whiting
+  This work is licensed under a Creative Commons Attribution 4.0 International License
+  https://creativecommons.org/licenses/by/4.0/
+*/
 import {choose, fill} from './utils.js';
 import * as music from './theory.js';
 const PatternSize = 64;

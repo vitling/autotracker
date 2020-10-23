@@ -1,3 +1,6 @@
+<!--Copyright 2020 David Whiting-->
+<!--This work is licensed under a Creative Commons Attribution 4.0 International License-->
+<!--https://creativecommons.org/licenses/by/4.0/-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,6 +64,24 @@
             margin:0;
         }
 
+        @media(max-width: 1000px) {
+            h1 {
+                letter-spacing: 0.5ch;
+                font-size:3em;
+            }
+        }
+
+        @media(max-width: 700px) {
+            h1 {
+                font-size: 2em;
+                letter-spacing: 0.5ch;
+            }
+            header {
+                font-size: 14pt;
+            }
+
+        }
+
         h3 {
             margin: 0;
         }
@@ -85,12 +106,21 @@
             font-size: 2em;
         }
 
+        a {
+            color: white;
+        }
+        p {
+            margin: 0;
+        }
+
     </style>
 </head>
 <body>
 <header>
 <h1><span class="auto">AUTO</span><span class="tracker">TRACKER</span></h1>
-<p>An endless randomised algorithmic Chiptune composition by Vitling aka Demoscene Time Machine</p>
+    <p>An endless randomised algorithmic Chiptune composition by <a href="https://www.vitling.xyz">Vitling</a> aka <a href="https://demoscenetimemachine.com/album/gravity">Demoscene Time Machine</a></p>
+    <p>Expect much better results with Firefox, Chrome or Opera, because they follow the WebAudio standard much better than Safari</p>
+    <p><a href="https://github.com/DavW/autotracker">Source Code</a></p>
 </header>
 <div id="display" style="">
 <div id="click-to-start">

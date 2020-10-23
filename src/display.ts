@@ -1,3 +1,8 @@
+/*
+  Copyright 2020 David Whiting
+  This work is licensed under a Creative Commons Attribution 4.0 International License
+  https://creativecommons.org/licenses/by/4.0/
+*/
 const A0 = -12;
 
 function textRepr(slot: Slot) {
@@ -27,9 +32,9 @@ function textRepr(slot: Slot) {
 
 function PatternDisplay(display: HTMLElement) {
 
-    function setPatterns(newPats: Pattern[]) {
+    function setPatterns(newPats: Pattern<Slot>[]) {
         display.innerHTML = "";
-        function add(pattern: Pattern, index: number) {
+        function add(pattern: Pattern<Slot>, index: number) {
             const pDisplay = document.createElement("code");
             pDisplay.innerHTML =
                 "<h3>" + (index === 4 ? "*" : "⎍") + (index + 1) + "</h3>" +
