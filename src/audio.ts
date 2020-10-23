@@ -119,8 +119,8 @@ function Audio(ctx: AudioContext) {
                 toneOscillator.detune.setValueAtTime(3000, ctx.currentTime);
                 toneOscillator.detune.setTargetAtTime(0, ctx.currentTime, 0.07);
                 toneGain.gain.cancelScheduledValues(ctx.currentTime);
-                toneGain.gain.setValueAtTime(0.3 * vel, ctx.currentTime);
-                toneGain.gain.setValueCurveAtTime(new Float32Array([0.3 * vel, 0.3 * vel, 0.2 * vel, 0.1 * vel, 0.0]), ctx.currentTime, 0.10);
+                toneGain.gain.setValueAtTime(0.2 * vel, ctx.currentTime);
+                toneGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.2 * vel, 0.13 * vel, 0.05 * vel, 0.0]), ctx.currentTime, 0.10);
             } else if (slot.drum === 'NSS') {
                 noiseGain.gain.cancelScheduledValues(ctx.currentTime);
                 noiseGain.gain.setValueAtTime(0.1 * vel,ctx.currentTime);
@@ -136,8 +136,8 @@ function Audio(ctx: AudioContext) {
                 toneOscillator.detune.setValueAtTime(2400, ctx.currentTime);
                 toneOscillator.detune.setTargetAtTime(600, ctx.currentTime, 0.04);
                 toneGain.gain.cancelScheduledValues(ctx.currentTime);
-                toneGain.gain.setValueAtTime(0.2 * vel, ctx.currentTime);
-                toneGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.06 * vel, 0.02 * vel, 0]), ctx.currentTime, 0.10);
+                toneGain.gain.setValueAtTime(0.15 * vel, ctx.currentTime);
+                toneGain.gain.setValueCurveAtTime(new Float32Array([0.15 * vel, 0.05 * vel, 0.01 * vel, 0]), ctx.currentTime, 0.10);
                 noiseGain.gain.cancelScheduledValues(ctx.currentTime);
                 noiseGain.gain.setValueAtTime(0.2 * vel,ctx.currentTime);
                 noiseGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel,0.15 * vel,0.0]), ctx.currentTime, 0.15);
