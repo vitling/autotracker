@@ -13,7 +13,7 @@ type Drum = {
 
 type Slot = Note | Drum
 
-type Pattern = Slot[];
+type Pattern<T> = T[];
 
 type Key = number & {"keyType": true}
 

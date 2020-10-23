@@ -7,8 +7,6 @@ import * as Generators from './generators.js'
 
 const PatternSize = 64;
 
-
-
 const progressions = [
     [1,1,1,1,6,6,6,6,4,4,4,4,3,3,5,5],
     [1,1,1,1,6,6,6,6,1,1,1,1,6,6,6,6],
@@ -21,15 +19,18 @@ const progressions = [
     [1,1,1,1,1,1,1,1,4,4,4,4,4,4,4,4]
 ];
 
+type Synth<T> = { play: (note: T) => void}
+type FourChannelsPlusDrums = [Note, Note, Note, Note, Drum]
+type PatternsType<T> = { [K in keyof T]: Pattern<T[K]> };
+type SynthsType<T> = { [K in keyof T]: Synth<T[K]> }
+
 interface State {
     key: Key,
     scale: Scale,
     progression: Progression,
-    patterns: Pattern[],
+    patterns: PatternsType<FourChannelsPlusDrums>,
     bpm: number
 }
-
-
 
 function bpmClock() {
     let intervalHandle = {
@@ -50,7 +51,7 @@ function start() {
         key: rndInt(12) as Key,
         scale: music.scales.minor,
         progression: progressions[0],
-        patterns: [] as Pattern[],
+        patterns: [[],[],[],[],[]] as PatternsType<FourChannelsPlusDrums>,
         bpm: 112
     };
 
@@ -61,7 +62,7 @@ function start() {
     const ctx: AudioContext = new (window.AudioContext || window.webkitAudioContext)() as AudioContext;
     const au = Audio(ctx);
 
-    const synths = [
+    const synths: SynthsType<FourChannelsPlusDrums> = [
         au.SquareSynth(),
         au.SquareSynth(-0.5),
         au.SquareSynth(),
@@ -84,20 +85,23 @@ function start() {
         }
         if (f % 128 === 0) {
             state.patterns =[
-                choose([Generators.bass, Generators.bass2, Generators.empty])(state.progression, state.key, state.scale),
-                Math.random() < 0.7 ? Generators.arp(state.progression, state.key, state.scale) : Generators.empty(),
-                Math.random() < 0.7 ? Generators.melody1(state.progression, state.key, state.scale) : Generators.empty(),
-                choose([Generators.empty, Generators.arp, Generators.melody1])(state.progression, state.key, state.scale),
-                Math.random() < 0.8 ? Generators.drum() : Generators.empty(),
+                choose([Generators.bass, Generators.bass2, Generators.emptyNote])(state.progression, state.key, state.scale),
+                Math.random() < 0.7 ? Generators.arp(state.progression, state.key, state.scale) : Generators.emptyNote(),
+                Math.random() < 0.7 ? Generators.melody1(state.progression, state.key, state.scale) : Generators.emptyNote(),
+                choose([Generators.emptyNote, Generators.arp, Generators.melody1])(state.progression, state.key, state.scale),
+                Math.random() < 0.8 ? Generators.drum() : Generators.emptyDrum(),
             ];
             display.setPatterns(state.patterns);
         }
         display.highlightRow(positionInPattern);
 
-        state.patterns.forEach((pat, i) => {
-            const note = pat[positionInPattern];
-            synths[i].play(note as any);
-        });
+        // Not a loop because these tuple parts have different types depending on melody vs drum
+        synths[0].play(state.patterns[0][positionInPattern]);
+        synths[1].play(state.patterns[1][positionInPattern]);
+        synths[2].play(state.patterns[2][positionInPattern]);
+        synths[3].play(state.patterns[3][positionInPattern]);
+        synths[4].play(state.patterns[4][positionInPattern]);
+
     }
 
     clock.set(state.bpm, frame);

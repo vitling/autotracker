@@ -5,7 +5,7 @@
     "lib": ["dom", "esnext"],
     "sourceMap": true,
     "outDir": "./target",
-    "strict": true,
+    "strict": true
   },
   "compileOnSave": true,
   "include": [

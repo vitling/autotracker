@@ -2,7 +2,7 @@ import {choose, fill} from './utils.js';
 import * as music from './theory.js';
 const PatternSize = 64;
 
-function arp(progression: Progression, key: Key, scale: Scale): Pattern {
+function arp(progression: Progression, key: Key, scale: Scale): Pattern<Note> {
     const octave = choose([0,12,24]);
     const offset = choose([0,1,2]);
     const pwOffset = Math.floor(Math.random() * 8) * 2;
@@ -16,29 +16,29 @@ function arp(progression: Progression, key: Key, scale: Scale): Pattern {
             fx: {
                 pulseWidth: ((pwOffset + i) % pwCycle) / (pwCycle + 1)
             }
-        } as Slot;
+        } as Note;
     })
 }
-function bass(progression: Progression, key: Key, scale: Scale): Pattern {
+function bass(progression: Progression, key: Key, scale: Scale): Pattern<Note> {
     return fill(PatternSize, i => {
         const progIndex = Math.floor(i / 4);
         const chordNumber = progression[progIndex];
         const chord = music.chordTypes.single.map(noteIndex => key + scale[(chordNumber - 1 + noteIndex) % scale.length]);
-        return {note: i % 2 === 1 ? 'cont' : chord[0] + (Math.floor(i / 2) % 2) * 12 - 12, fx: {pulseWidth: 0}} as Slot;
+        return {note: i % 2 === 1 ? 'cont' : chord[0] + (Math.floor(i / 2) % 2) * 12 - 12, fx: {pulseWidth: 0}} as Note;
     })
 }
-function bass2(progression: Progression, key: Key, scale: Scale): Pattern { return fill(PatternSize, i => {
+function bass2(progression: Progression, key: Key, scale: Scale): Pattern<Note> { return fill(PatternSize, i => {
     const progIndex = Math.floor(i / 4);
     const chordNumber = progression[progIndex];
     const chord = music.chordTypes.single.map(noteIndex => key + scale[(chordNumber - 1 + noteIndex) % scale.length]);
-    return {note: i % 8 === 0 ? chord[0] - 12: 'cont', vel: 2, fx: {pulseWidth: Math.random()}} as Slot;
+    return {note: i % 8 === 0 ? chord[0] - 12: 'cont', vel: 2, fx: {pulseWidth: Math.random()}} as Note;
 })}
-function melody1(progression: Progression, key: Key, scale: Scale): Pattern {
+function melody1(progression: Progression, key: Key, scale: Scale): Pattern<Note> {
     const slow = Math.random() < 0.5;
     const pwmMod = Math.random() < 0.5;
     let pwmAmount = Math.random() * 0.5;
 
-    const pattern: Slot[] = [];
+    const pattern: Note[] = [];
     let current = (choose(music.chordTypes.triad) - 1) + scale.length * choose([2, 3, 4]);
     for (let i = 0; i < PatternSize; i++) {
         if (Math.random() < 0.5) {
@@ -90,7 +90,8 @@ function melody1(progression: Progression, key: Key, scale: Scale): Pattern {
     }
     return pattern;
 }
-function empty(): Pattern { return fill(PatternSize, _ => ({note: '---'} as Slot))}
-function drum(): Pattern { return fill(PatternSize, i => ({note: 0, drum: i % 8 === 0 ? 'KCK' : i % 8 === 4 ? 'SNR' : (i % 2 === 0 && Math.random() < 0.2) ? 'KCK' : (Math.random() < 0.05) ? choose(['KCK', 'SNR']) : 'NSS', vel: 0.6 + 0.2 * (1-(i % 2)) } as Slot))}
+function emptyNote(): Pattern<Note> { return fill(PatternSize, _ => ({note: '---'} as Note))}
+function emptyDrum(): Pattern<Drum> { return fill(PatternSize, _ => ({drum: '---'} as Drum))}
+function drum(): Pattern<Drum> { return fill(PatternSize, i => ({note: 0, drum: i % 8 === 0 ? 'KCK' : i % 8 === 4 ? 'SNR' : (i % 2 === 0 && Math.random() < 0.2) ? 'KCK' : (Math.random() < 0.05) ? choose(['KCK', 'SNR']) : 'NSS', vel: 0.6 + 0.2 * (1-(i % 2)) } as Drum))}
 
-export {arp, bass, bass2, melody1, drum, empty}
+export {arp, bass, bass2, melody1, drum, emptyNote, emptyDrum}
