@@ -32,15 +32,18 @@ function textRepr(slot: Slot) {
 
 function PatternDisplay(display: HTMLElement) {
 
-    function setPatterns(newPats: Pattern<Slot>[]) {
-        display.innerHTML = "";
+    function setPatterns(newPats: Pattern<Slot>[], saveString: string) {
+        display.innerHTML = "<div class='header'>Pattern ID: <a href='?" + saveString + "' class='save-string'>" + saveString + "</a></div>";
+        const container = document.createElement("div");
+        container.classList.add("columns");
+        display.append(container);
         function add(pattern: Pattern<Slot>, index: number) {
             const pDisplay = document.createElement("code");
             pDisplay.innerHTML =
                 "<h3>" + (index === 4 ? "*" : "⎍") + (index + 1) + "</h3>" +
                 pattern.map((x, i) => "<div class='note' data-index='" + i + "'>" + textRepr(x) + "</div>").join("");
 
-            display.append(pDisplay);
+            container.append(pDisplay);
         }
         newPats.forEach((p, i) => add(p, i))
     }
