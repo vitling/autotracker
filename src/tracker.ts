@@ -187,19 +187,26 @@ function start() {
     clock.set(state.bpm, frame);
 }
 
-if (window.location.search.startsWith("?")) {
-    (document.getElementById("seed-text") as HTMLInputElement).value = window.location.search.slice(1);
-}
+window.onload = function() {
 
-let started = false;
-document.getElementById("start")?.addEventListener("click", e => {
-    if (!started) { start(); }
-    started = true;
-});
-
-document.getElementById("seed-entry")?.addEventListener("keydown", e => {
-    if (e.key === "Enter") {
-        if (!started) { start(); }
-        started = true;
+    if (window.location.search.startsWith("?")) {
+        (document.getElementById("seed-text") as HTMLInputElement).value = window.location.search.slice(1);
     }
-});
+
+    let started = false;
+    document.getElementById("start")?.addEventListener("click", e => {
+        if (!started) {
+            start();
+        }
+        started = true;
+    });
+
+    document.getElementById("seed-entry")?.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+            if (!started) {
+                start();
+            }
+            started = true;
+        }
+    });
+}

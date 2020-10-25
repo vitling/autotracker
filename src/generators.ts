@@ -46,7 +46,7 @@ function bass(context: MusicContext): Pattern<Note> {
 }
 function bass2(context: MusicContext): Pattern<Note> { return fill(PatternSize, i => {
     const chord = getChord(context, i);
-    return {note: i % 8 === 0 ? chord[0] - 12: 'cont', vel: 2, fx: {pulseWidth: rnd()}} as Note;
+    return {note: i % 8 === 0 ? ((chord[0] + 4) % 12) - 4: 'cont', vel: 2, fx: {pulseWidth: rnd()}} as Note;
 })}
 function melody1(context: MusicContext): Pattern<Note> {
     const slow = flip();
