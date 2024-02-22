@@ -42,6 +42,8 @@ interface State {
 }
 
 class Settings {
+    regenerateEnabled: boolean = true;
+    forceGenerate: boolean = false;
     muted: boolean[] = [false, false, false, false, false];
 }
 
@@ -80,15 +82,25 @@ function restore(code: SaveCode): State {
 
 function bpmClock() {
     let intervalHandle = {
-        bpmClock: 0
+        bpmClock: 0,
+        frameFunction: (_: number) => {}
     };
     let fN = 0;
     function set(bpm: number, frameFunction: (f: number) => void) {
         window.clearInterval(intervalHandle.bpmClock);
         intervalHandle.bpmClock = window.setInterval(() => frameFunction(fN++), (60000 / bpm) / 4);
+        intervalHandle.frameFunction = frameFunction;
+    }
+    function setBpm(bpm: number) {
+        set(bpm, intervalHandle.frameFunction);
+    }
+    function resetFrameNumber() {
+        fN = 0;
     }
     return {
-        set
+        set,
+        setBpm,
+        resetFrameNumber
     }
 }
 
@@ -171,10 +183,12 @@ function start() {
 
     function frame(f: number) {
         const positionInPattern = f % PatternSize;
-        if (f % 128 === 0 && f!== 0) {
+        if (settings.forceGenerate || settings.regenerateEnabled && f % 128 === 0 && f!== 0) {
+            settings.forceGenerate = false;
             mutateState(state);
             newPatterns();
-            clock.set(state.bpm, frame);
+            clock.resetFrameNumber();
+            clock.setBpm(state.bpm);
             display.setPatterns(patterns, save(state));
         }
 

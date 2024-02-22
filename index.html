@@ -155,6 +155,37 @@
         h3 {
             cursor: default;
         }
+
+        input#regenerateEnabled[type=checkbox] {
+            display:none;
+        }
+
+        input#regenerateEnabled[type=checkbox] + label {
+            margin-left: 8px;
+            display: inline-block;
+            padding: 0 0 0 0px;
+            background: url("checkbox-unchecked.png") no-repeat;
+            height: 32px;
+            width: 32px;
+            background-size: 80%;
+            vertical-align: middle;
+        }
+
+        input#regenerateEnabled[type=checkbox]:checked + label {
+            background: url("checkbox-checked.png") no-repeat;
+            background-size: 80%;
+        }
+
+        button#forceGenerate {
+            cursor: default;
+            padding: 0;
+            border: none;
+            background: url("regenerate.png") no-repeat;
+            width: 32px;
+            height: 32px;
+            background-size: 80%;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>

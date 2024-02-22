@@ -33,9 +33,21 @@ function textRepr(slot: Slot) {
 }
 
 function PatternDisplay(display: HTMLElement) {
+    const regenerateCheckbox = document.createElement("input");
 
     function setPatterns(newPats: Pattern<Slot>[], saveString: string) {
-        display.innerHTML = "<div class='header'>Pattern ID: <a href='?" + saveString + "' class='save-string'>" + saveString + "</a></div>";
+        display.innerHTML =
+            `<div class='header'>
+                Pattern ID: <a href='?${saveString}' class='save-string'>${saveString}</a>
+                <input type="checkbox" ${settings.regenerateEnabled ? 'checked' : ''} id="regenerateEnabled"/>
+                <label for="regenerateEnabled"></label><button type="button" id="forceGenerate"></button> 
+            </div>`;
+        document.getElementById("regenerateEnabled")?.addEventListener("input", e =>
+            settings.regenerateEnabled = (e.target as HTMLInputElement).checked
+        );
+        document.getElementById("forceGenerate")?.addEventListener("click", e =>
+            settings.forceGenerate = true
+        );
         const container = document.createElement("div");
         container.classList.add("columns");
         display.append(container);
