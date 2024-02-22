@@ -7,7 +7,7 @@
 import PatternDisplay from './display.js'
 import {choose, fill, rndInt, rnd, seedRNG} from './utils.js'
 
-import Audio from "./audio.js";
+import Audio, { Synth } from "./audio.js";
 import * as music from './theory.js'
 import * as Generators from './generators.js'
 import {scales} from "./theory.js";
@@ -26,12 +26,11 @@ const progressions = [
     [1,1,1,1,1,1,1,1,4,4,4,4,4,4,4,4]
 ];
 
-type Synth<T> = { play: (note: T) => void}
 type FourChannelsPlusDrums = [Note, Note, Note, Note, Drum]
 type PatternsType<T> = { [K in keyof T]: Pattern<T[K]> };
 type SynthsType<T> = { [K in keyof T]: Synth<T[K]> }
 
-
+export let synths: SynthsType<FourChannelsPlusDrums>
 
 interface State {
     key: Key,
@@ -41,6 +40,14 @@ interface State {
     songIndex: number,
     seedCode: string
 }
+
+class Settings {
+    regenerateEnabled: boolean = true;
+    forceGenerate: boolean = false;
+    muted: boolean[] = [false, false, false, false, false];
+}
+
+export const settings = new Settings()
 
 type SaveCode = string & {typeTag: "__SaveCode"}
 
@@ -75,15 +82,25 @@ function restore(code: SaveCode): State {
 
 function bpmClock() {
     let intervalHandle = {
-        bpmClock: 0
+        bpmClock: 0,
+        frameFunction: (_: number) => {}
     };
     let fN = 0;
     function set(bpm: number, frameFunction: (f: number) => void) {
         window.clearInterval(intervalHandle.bpmClock);
         intervalHandle.bpmClock = window.setInterval(() => frameFunction(fN++), (60000 / bpm) / 4);
+        intervalHandle.frameFunction = frameFunction;
+    }
+    function setBpm(bpm: number) {
+        set(bpm, intervalHandle.frameFunction);
+    }
+    function resetFrameNumber() {
+        fN = 0;
     }
     return {
-        set
+        set,
+        setBpm,
+        resetFrameNumber
     }
 }
 
@@ -139,7 +156,7 @@ function start() {
     const ctx: AudioContext = new (window.AudioContext || window.webkitAudioContext)() as AudioContext;
     const au = Audio(ctx);
 
-    const synths: SynthsType<FourChannelsPlusDrums> = [
+    synths = [
         au.SquareSynth(),
         au.SquareSynth(-0.5),
         au.SquareSynth(),
@@ -166,21 +183,30 @@ function start() {
 
     function frame(f: number) {
         const positionInPattern = f % PatternSize;
-        if (f % 128 === 0 && f!== 0) {
+        if (settings.forceGenerate || settings.regenerateEnabled && f % 128 === 0 && f!== 0) {
+            settings.forceGenerate = false;
             mutateState(state);
             newPatterns();
-            clock.set(state.bpm, frame);
+            clock.resetFrameNumber();
+            clock.setBpm(state.bpm);
             display.setPatterns(patterns, save(state));
         }
 
         display.highlightRow(positionInPattern);
 
-        // Not a loop because these tuple parts have different types depending on melody vs drum
-        synths[0].play(patterns[0][positionInPattern]);
-        synths[1].play(patterns[1][positionInPattern]);
-        synths[2].play(patterns[2][positionInPattern]);
-        synths[3].play(patterns[3][positionInPattern]);
-        synths[4].play(patterns[4][positionInPattern]);
+        try {
+            // Not a loop because these tuple parts have different types depending on melody vs drum
+            synths[0].play(patterns[0][positionInPattern]);
+            synths[1].play(patterns[1][positionInPattern]);
+            synths[2].play(patterns[2][positionInPattern]);
+            synths[3].play(patterns[3][positionInPattern]);
+            synths[4].play(patterns[4][positionInPattern]);
+        } catch (e: any) {
+            // Ignore DOMException: AudioParam.setValueAtTime: Can't add events during a curve event
+            if (e.name !== "NotSupportedError") {
+                throw e;
+            }
+        }
 
     }
 

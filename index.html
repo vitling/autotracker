@@ -8,7 +8,7 @@
     <title>AutoTracker</title>
 <!--    <script type="text/javascript" src="dist/tracker.js"></script>-->
     <script type="module" src="target/tracker.js"></script>
-<!--    <link rel="icon" type="image/png" href="images/icon.png">-->
+    <link rel="shortcut icon" type="image/png" href="icon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta property="og:title" content="AutoTracker" />
     <meta property="og:type" content="website" />
@@ -147,6 +147,54 @@
             margin: 0;
         }
 
+        @media (min-width: 600px) {
+            .muted:after {
+                content: " MUTE";
+                font-weight: normal;
+            }
+        }
+
+        @media (max-width: 599px) {
+            .muted:after {
+                content: " M";
+                font-weight: normal;
+            }
+        }
+
+        h3 {
+            cursor: default;
+        }
+
+        input#regenerateEnabled[type=checkbox] {
+            display:none;
+        }
+
+        input#regenerateEnabled[type=checkbox] + label {
+            margin-left: 8px;
+            display: inline-block;
+            padding: 0 0 0 0px;
+            background: url("checkbox-unchecked.png") no-repeat;
+            height: 32px;
+            width: 32px;
+            background-size: 80%;
+            vertical-align: middle;
+        }
+
+        input#regenerateEnabled[type=checkbox]:checked + label {
+            background: url("checkbox-checked.png") no-repeat;
+            background-size: 80%;
+        }
+
+        button#forceGenerate {
+            cursor: default;
+            padding: 0;
+            border: none;
+            background: url("regenerate.png") no-repeat;
+            width: 32px;
+            height: 32px;
+            background-size: 80%;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
