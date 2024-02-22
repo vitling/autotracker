@@ -147,11 +147,20 @@
             margin: 0;
         }
 
-        .muted:after {
-            content: " MUTE";
-            font-weight: normal;
+        @media (min-width: 600px) {
+            .muted:after {
+                content: " MUTE";
+                font-weight: normal;
+            }
         }
-        
+
+        @media (max-width: 599px) {
+            .muted:after {
+                content: " M";
+                font-weight: normal;
+            }
+        }
+
         h3 {
             cursor: default;
         }
