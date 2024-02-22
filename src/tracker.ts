@@ -175,12 +175,19 @@ function start() {
 
         display.highlightRow(positionInPattern);
 
-        // Not a loop because these tuple parts have different types depending on melody vs drum
-        synths[0].play(patterns[0][positionInPattern]);
-        synths[1].play(patterns[1][positionInPattern]);
-        synths[2].play(patterns[2][positionInPattern]);
-        synths[3].play(patterns[3][positionInPattern]);
-        synths[4].play(patterns[4][positionInPattern]);
+        try {
+            // Not a loop because these tuple parts have different types depending on melody vs drum
+            synths[0].play(patterns[0][positionInPattern]);
+            synths[1].play(patterns[1][positionInPattern]);
+            synths[2].play(patterns[2][positionInPattern]);
+            synths[3].play(patterns[3][positionInPattern]);
+            synths[4].play(patterns[4][positionInPattern]);
+        } catch (e: any) {
+            // Ignore DOMException: AudioParam.setValueAtTime: Can't add events during a curve event
+            if (e.name !== "NotSupportedError") {
+                throw e;
+            }
+        }
 
     }
 
