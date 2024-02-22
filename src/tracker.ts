@@ -7,7 +7,7 @@
 import PatternDisplay from './display.js'
 import {choose, fill, rndInt, rnd, seedRNG} from './utils.js'
 
-import Audio from "./audio.js";
+import Audio, { Synth } from "./audio.js";
 import * as music from './theory.js'
 import * as Generators from './generators.js'
 import {scales} from "./theory.js";
@@ -26,12 +26,11 @@ const progressions = [
     [1,1,1,1,1,1,1,1,4,4,4,4,4,4,4,4]
 ];
 
-type Synth<T> = { play: (note: T) => void}
 type FourChannelsPlusDrums = [Note, Note, Note, Note, Drum]
 type PatternsType<T> = { [K in keyof T]: Pattern<T[K]> };
 type SynthsType<T> = { [K in keyof T]: Synth<T[K]> }
 
-
+export let synths: SynthsType<FourChannelsPlusDrums>
 
 interface State {
     key: Key,
@@ -41,6 +40,12 @@ interface State {
     songIndex: number,
     seedCode: string
 }
+
+class Settings {
+    muted: boolean[] = [false, false, false, false, false];
+}
+
+export const settings = new Settings()
 
 type SaveCode = string & {typeTag: "__SaveCode"}
 
@@ -139,7 +144,7 @@ function start() {
     const ctx: AudioContext = new (window.AudioContext || window.webkitAudioContext)() as AudioContext;
     const au = Audio(ctx);
 
-    const synths: SynthsType<FourChannelsPlusDrums> = [
+    synths = [
         au.SquareSynth(),
         au.SquareSynth(-0.5),
         au.SquareSynth(),

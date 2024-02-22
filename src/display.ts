@@ -3,6 +3,8 @@
   This work is licensed under a Creative Commons Attribution 4.0 International License
   https://creativecommons.org/licenses/by/4.0/
 */
+import { settings, synths } from "./tracker.js";
+
 const A0 = -12;
 
 function textRepr(slot: Slot) {
@@ -40,10 +42,18 @@ function PatternDisplay(display: HTMLElement) {
         function add(pattern: Pattern<Slot>, index: number) {
             const pDisplay = document.createElement("code");
             pDisplay.innerHTML =
-                "<h3>" + (index === 4 ? "*" : "⎍") + (index + 1) + "</h3>" +
+                `<h3 id="patternHeader${index}" class="${settings.muted[index] ? 'muted': ''}">
+                    ${index === 4 ? "*" : "&#x238D;"} ${index + 1}
+                </h3>` +
                 pattern.map((x, i) => "<div class='note' data-index='" + i + "'>" + textRepr(x) + "</div>").join("");
 
             container.append(pDisplay);
+
+            document.getElementById(`patternHeader${index}`)?.addEventListener("click", e => {
+                settings.muted[index] = !settings.muted[index];
+                synths[index].mute(settings.muted[index]);
+                (e.target as HTMLElement).classList.toggle("muted", settings.muted[index]);
+            });
         }
         newPats.forEach((p, i) => add(p, i))
     }

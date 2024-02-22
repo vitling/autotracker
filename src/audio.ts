@@ -5,7 +5,7 @@
 */
 import {fill, rnd} from './utils.js'
 
-type Synth<T> = { play: (note: T) => void}
+export type Synth<T> = { play: (note: T) => void, mute: (muted: boolean) => void}
 
 const A3Frequency = 440;
 const A0Frequency = A3Frequency / 8;
@@ -63,6 +63,8 @@ function Audio(ctx: AudioContext) {
         pulseOutputGain.connect(outputPanner);
         outputPanner.connect(ctx.destination);
 
+        let muted = false;
+
         const freq = wavetableTrigger.frequency,
             width = wavetableOffsetGain.gain,
             gain = pulseOutputGain.gain;
@@ -79,7 +81,7 @@ function Audio(ctx: AudioContext) {
             slide(gain, 0, release);
         }
         function play(note: Note) {
-            if (note.note === "---") {
+            if (muted || note.note === "---") {
                 noteOff();
             }  else if (note.note === 'cont') {
                 // do nothing
@@ -89,7 +91,11 @@ function Audio(ctx: AudioContext) {
             set(width, note.fx?.pulseWidth ?? 0.0);
         }
 
-        return {play}
+        function mute(_muted: boolean) {
+            muted = _muted;
+        }
+
+        return {play, mute}
     }
 
     function DrumSynth(): Synth<Drum> {
@@ -111,10 +117,21 @@ function Audio(ctx: AudioContext) {
         noiseGain.connect(noisePan);
         noisePan.connect(ctx.destination);
 
+        let muted = false;
 
-        function play(slot: Drum) {
+        function drumOff() {
+            toneGain.gain.cancelScheduledValues(ctx.currentTime);
+            toneGain.gain.setValueAtTime(0, ctx.currentTime);
+            noiseGain.gain.cancelScheduledValues(ctx.currentTime);
+            noiseGain.gain.setValueAtTime(0, ctx.currentTime);
+        }
+
+        function play(this: Synth<Drum>, slot: Drum) {
             const vel = slot.vel ? slot.vel : 1;
-            if (slot.drum === 'KCK') {
+
+            if (muted) {
+                drumOff()
+            } else if (slot.drum === 'KCK') {
                 toneOscillator.detune.cancelScheduledValues(ctx.currentTime);
                 toneOscillator.detune.setValueAtTime(3000, ctx.currentTime);
                 toneOscillator.detune.setTargetAtTime(0, ctx.currentTime, 0.07);
@@ -143,9 +160,12 @@ function Audio(ctx: AudioContext) {
                 noiseGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel,0.15 * vel,0.0]), ctx.currentTime, 0.15);
             }
         }
-        return {
-            play,
+
+        function mute(_muted: boolean) {
+            muted = _muted;
         }
+
+        return {play, mute}
     }
     return {
         SquareSynth,
